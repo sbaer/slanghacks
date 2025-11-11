@@ -35,10 +35,24 @@ int main(int argc, char** argv)
     globalSession->createCompileRequest(&request);
 
     int unit = request->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, nullptr);
+
+    const char* source = R"(
+struct VS_OUTPUT
+{
+  float4 position : SV_POSITION;
+};
+
+[shader("fragment")]
+float4 fragment_shader_main(VS_OUTPUT input) : SV_TARGET
+{
+  return float4(1,0,0,1);
+}
+)";
+    request->addTranslationUnitSourceString(unit, nullptr, source);
 //    slang_addSourceFile(request, unit, inputPath);
     request->setCodeGenTarget(SlangCompileTarget::SLANG_DXBC);
     request->setTargetProfile(0, targetDesc.profile);
-    request->addEntryPoint(unit, "shader_main", SlangStage::SLANG_STAGE_FRAGMENT);
+    request->addEntryPoint(unit, "fragment_shader_main", SlangStage::SLANG_STAGE_FRAGMENT);
     SlangResult compileResult = request->compile();
     if (compileResult != SLANG_OK)
     {
@@ -49,9 +63,10 @@ int main(int argc, char** argv)
 
     size_t blobSize = 0;
     const void* blob = request->getEntryPointCode(0, &blobSize);
-    //std::ofstream out(outputPath, std::ios::binary);
-    //out.write(reinterpret_cast<const char*>(blob), blobSize);
-    //out.close();
-    //std::cout << "Compiled to: " << outputPath << "\n";
+    const char* outputPath = "blobout.cso";
+    std::ofstream out(outputPath, std::ios::binary);
+    out.write(reinterpret_cast<const char*>(blob), blobSize);
+    out.close();
+    std::cout << "Compiled to: " << outputPath << "\n";
     return 0;
 }
